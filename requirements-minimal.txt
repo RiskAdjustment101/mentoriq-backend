@@ -1,0 +1,10 @@
+# MentorIQ Backend Dependencies - Minimal for testing
+# FastAPI and ASGI server
+fastapi==0.100.1
+uvicorn==0.23.2
+
+# Basic HTTP client
+httpx==0.24.1
+
+# Development tools
+python-dotenv==1.0.0

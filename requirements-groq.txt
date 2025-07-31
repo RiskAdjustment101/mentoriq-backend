@@ -1,0 +1,16 @@
+# MentorIQ Backend Dependencies - Groq Integration
+# FastAPI and ASGI server
+fastapi==0.100.1
+uvicorn==0.23.2
+
+# Groq AI integration
+groq==0.4.1
+
+# HTTP client
+httpx==0.24.1
+
+# Environment management
+python-dotenv==1.0.0
+
+# Basic validation
+pydantic==2.5.0
