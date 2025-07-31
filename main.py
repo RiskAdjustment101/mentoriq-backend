@@ -1,142 +1,121 @@
 """
-MentorIQ FastAPI Backend with Ollama AI Integration
-Provides intelligent AI responses trained on comprehensive platform knowledge
+MentorIQ FastAPI Backend - Ultra-Simple Version for Deployment
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import logging
+from pydantic import BaseModel
+from typing import Dict, List, Optional
 import os
 from datetime import datetime
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Create app
+app = FastAPI(title="MentorIQ AI Backend", version="1.0.0")
 
-logger = logging.getLogger(__name__)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan events"""
-    # Startup
-    logger.info("🚀 MentorIQ Backend starting up...")
-    logger.info("🤖 Initializing AI services...")
-    
-    # TODO: Initialize Ollama connection when ready
-    # await initialize_ollama()
-    
-    logger.info("✅ Backend ready to serve intelligent responses!")
-    
-    yield
-    
-    # Shutdown
-    logger.info("🛑 MentorIQ Backend shutting down...")
-
-# Create FastAPI application
-app = FastAPI(
-    title="MentorIQ AI Backend",
-    description="""
-    AI-augmented mentor platform backend providing intelligent responses 
-    trained on comprehensive platform knowledge for FIRST LEGO League programs.
-    
-    Features:
-    - Landing page program discovery assistance
-    - Bidirectional registration system support
-    - Context-aware conversations across platform
-    - Knowledge base trained on complete platform documentation
-    """,
-    version="1.1.0",
-    lifespan=lifespan
-)
-
-# CORS configuration for frontend integration
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite dev server
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for now
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Import and include AI endpoints
-from src.api.ai_endpoints import router as ai_router
-app.include_router(ai_router)
+# Models
+class ChatRequest(BaseModel):
+    query: str
+    user_context: Optional[Dict] = None
+    conversation_history: Optional[List[Dict]] = None
 
+class AIResponse(BaseModel):
+    response: str
+    context: str
+    suggestions: Optional[List[str]] = None
+    timestamp: str
+
+# Routes
 @app.get("/")
-async def root():
-    """Root endpoint with API information"""
+def root():
     return {
         "service": "MentorIQ AI Backend",
-        "version": "1.1.0",
-        "description": "AI-augmented mentor platform with Ollama integration",
         "status": "operational",
-        "endpoints": {
-            "ai_chat_landing": "/api/ai/chat/landing",
-            "ai_chat_registration": "/api/ai/chat/registration", 
-            "ai_health": "/api/ai/health",
-            "knowledge_summary": "/api/ai/knowledge/summary"
-        },
-        "documentation": "/docs",
         "timestamp": datetime.now().isoformat()
     }
 
 @app.get("/health")
-async def health_check():
-    """Application health check"""
+def health():
     return {
         "status": "healthy",
-        "service": "MentorIQ Backend",
-        "version": "1.1.0",
-        "timestamp": datetime.now().isoformat(),
-        "components": {
-            "api": "operational",
-            "ai_service": "operational", 
-            "knowledge_base": "loaded"
-        }
+        "timestamp": datetime.now().isoformat()
     }
 
-@app.exception_handler(404)
-async def not_found_handler(request, exc):
-    """Custom 404 handler"""
-    return JSONResponse(
-        status_code=404,
-        content={
-            "error": "Endpoint not found",
-            "message": "The requested endpoint does not exist",
-            "available_endpoints": [
-                "/",
-                "/health", 
-                "/api/ai/chat/landing",
-                "/api/ai/chat/registration",
-                "/docs"
-            ]
-        }
-    )
+@app.post("/api/ai/chat/landing")
+def landing_chat(request: ChatRequest):
+    query = request.query.lower()
+    
+    # Simple responses based on keywords
+    if any(word in query for word in ['parent', 'child', 'kid']):
+        response = "Perfect! I'd love to help you find the ideal FLL program for your child. MentorIQ connects families with amazing mentors and teams in your area."
+        suggestions = ["Tell me about program costs", "How do I evaluate mentors?", "Take me to registration"]
+    elif any(word in query for word in ['mentor', 'teach', 'coach']):
+        response = "Wonderful! We're excited to connect with passionate educators. MentorIQ saves mentors 60%+ of administrative time through AI-powered tools."
+        suggestions = ["How does the platform save time?", "What support do mentors get?", "Create my mentor profile"]
+    else:
+        response = "Welcome to MentorIQ! I'm here to help you discover amazing FLL programs and mentors. What brings you here today?"
+        suggestions = ["I'm a parent looking for programs", "I want to become a mentor", "Tell me about your platform"]
+    
+    return {
+        "response": response,
+        "context": "landing",
+        "suggestions": suggestions,
+        "timestamp": datetime.now().isoformat()
+    }
 
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    """Custom 500 handler"""
-    logger.error(f"Internal server error: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": "Internal server error",
-            "message": "An unexpected error occurred",
-            "timestamp": datetime.now().isoformat()
-        }
-    )
+@app.post("/api/ai/chat/registration")
+def registration_chat(request: ChatRequest):
+    query = request.query
+    
+    # Extract basic info
+    field_updates = {}
+    response = "I'm here to help you complete your registration! "
+    
+    # Simple name detection
+    if "name is" in query.lower() or "i'm" in query.lower():
+        words = query.split()
+        for i, word in enumerate(words):
+            if word.lower() in ["name", "i'm", "am"] and i + 1 < len(words):
+                potential_name = words[i + 1].strip(".,!?")
+                if potential_name.isalpha():
+                    field_updates["name"] = potential_name
+                    response = f"Hi {potential_name}! Great to meet you. "
+                break
+    
+    # Simple email detection
+    if "@" in query:
+        words = query.split()
+        for word in words:
+            if "@" in word and "." in word:
+                field_updates["email"] = word.strip(".,!?")
+                response += "Thanks for providing your email address! "
+                break
+    
+    # User type detection
+    if any(word in query.lower() for word in ['parent', 'child', 'kid']):
+        field_updates["userType"] = "parent"
+        response += "Wonderful! We're excited to help you find the perfect FLL program for your child."
+    elif any(word in query.lower() for word in ['mentor', 'teach', 'coach']):
+        field_updates["userType"] = "mentor"
+        response += "Fantastic! We need more passionate mentors like you."
+    
+    if not field_updates:
+        response = "I'm here to help you complete your registration! You can tell me your name, email, and whether you're a parent or mentor."
+    
+    return {
+        "response": response,
+        "context": "registration", 
+        "field_updates": field_updates,
+        "timestamp": datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
     import uvicorn
-    
-    # Development server configuration
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
