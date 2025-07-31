@@ -1,1 +1,1 @@
-web: uvicorn main-groq:app --host 0.0.0.0 --port $PORT
+web: uvicorn main-groq:app --host 0.0.0.0 --port ${PORT:-8000}

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: mentoriq-backend
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main-groq:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: GROQ_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: ALLOWED_ORIGINS
+        value: https://mentoriq.netlify.app,http://localhost:5173
+    autoDeploy: true  # Auto deploy on push
